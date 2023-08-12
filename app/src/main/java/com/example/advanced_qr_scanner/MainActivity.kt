@@ -42,7 +42,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             AdvancedQRScannerTheme {
-
                 var code by remember { mutableStateOf("") }
                 val context = LocalContext.current
                 val lifeCycleOwner = LocalLifecycleOwner.current
