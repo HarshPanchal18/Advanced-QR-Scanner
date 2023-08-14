@@ -89,15 +89,15 @@ dependencies {
     val sqlDelightVersion = "1.5.4"
     implementation("com.squareup.sqldelight:android-driver:$sqlDelightVersion")
     implementation("com.squareup.sqldelight:coroutines-extensions-jvm:$sqlDelightVersion")
-    implementation("com.squareup.sqldelight:android-driver:$sqlDelightVersion")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 
     implementation("com.google.mlkit:barcode-scanning:17.0.2")
 
-    implementation("androidx.datastore:datastore-core:1.0.0")
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    val datastoreVersion = "1.0.0"
+    implementation("androidx.datastore:datastore-core:$datastoreVersion")
+    implementation("androidx.datastore:datastore-preferences:$datastoreVersion")
 
     val hiltVersion = "2.43.2"
     implementation("com.google.dagger:hilt-android:$hiltVersion")
