@@ -16,7 +16,7 @@ class ViewFinderOverlay(context: Context, attrs: AttributeSet) : View(context, a
     private val boxPaint: Paint = Paint().apply {
         color = ContextCompat.getColor(context, R.color.barcode_reticle_stroke)
         style = Paint.Style.STROKE
-        strokeWidth = context.resources.getDimension(R.dimen.barcode_reticle_stroke_width)
+        strokeWidth = context.resources.getDimensionPixelOffset(R.dimen.barcode_reticle_stroke_width).toFloat()
     }
     private val scrimPaint = Paint().apply {
         color = ContextCompat.getColor(context, R.color.barcode_reticle_background)

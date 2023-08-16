@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.DisplayMetrics
+import android.view.Surface
 import android.view.View
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
@@ -79,7 +80,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
         previewUseCase = Preview.Builder()
             .setTargetAspectRatio(screenAspectRatio)
-            .setTargetRotation(binding.previewView.display.rotation)
+            .setTargetRotation(Surface.ROTATION_0) // Fixed: java.lang.NullPointerException: Attempt to invoke virtual method 'int android.view.Display.getRotation()' on a null object reference
             .build()
 
         // Send signal to the camera that the previewUseCase is ready to receive data
@@ -121,7 +122,8 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
         analysisUseCase = ImageAnalysis.Builder()
             .setTargetAspectRatio(screenAspectRatio)
-            .setTargetRotation(binding.previewView.display.rotation)
+            //.setTargetRotation(binding.previewView.display.rotation)
+            .setTargetRotation(Surface.ROTATION_0)
             .build()
 
         // Creating an Executor that uses a single worker thread operating off an unbounded queue

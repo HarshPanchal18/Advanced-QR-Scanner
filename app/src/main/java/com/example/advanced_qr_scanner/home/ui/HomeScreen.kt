@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,11 +32,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,7 +84,7 @@ fun HomeScreen() {
                     Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_LONG).show()
                 }
             }
-            //viewModel.saveContent(content = scannedData)
+            viewModel.saveContent(content = scannedData)
         }
     }
 
@@ -92,7 +96,7 @@ fun HomeScreen() {
                 coroutineScope.launch { bottomSheetScaffoldState.show() }
             }
         })
-    //viewModel.loadScanHistory()
+    viewModel.loadScanHistory()
 
     ModalBottomSheetLayout(
         sheetState = bottomSheetScaffoldState,
@@ -126,6 +130,18 @@ fun HomeScreen() {
                     }
                 }
             }
+            ScanHistoryList(
+                homeState = viewModel.homeState,
+                onItemClick = { history ->
+                    history.content.launch(context)
+                },
+                onClearClick = { viewModel.removeAllScanHistory() },
+                onItemLongPress = { history ->
+                    localClipboardManager.setText(AnnotatedString(history.content))
+                    Toast.makeText(context,"Copied to clipboard",Toast.LENGTH_SHORT).show()
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            )
         }
     }
 }
@@ -211,11 +227,18 @@ fun ScanHistoryList(
             }
 
             is HomeState.ScanHistoryFetched -> {
-                val dateFormatter = SimpleDateFormat("hh.mm aa.dd-MM-yyyy", Locale.ENGLISH)
+                val dateFormatter = SimpleDateFormat("dd-MM-yyyy hh.mm.ss aa", Locale.ENGLISH)
+
                 TitleWithClear { onClearClick() }
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(homeState.scanHistory) { item ->
-                        //ScanHistoryItem()
+                        ScanHistoryItem(
+                            item = item,
+                            modifier = Modifier.fillMaxWidth(),
+                            dateFormatter = dateFormatter,
+                            onClick = onItemClick,
+                            onLongClick = onItemLongPress
+                        )
                     }
                 }
             }
@@ -258,7 +281,44 @@ fun TitleWithClear(onClearClick: () -> Unit) {
     }
 }
 
-@Preview
+@Composable
+fun ScanHistoryItem(
+    modifier: Modifier = Modifier,
+    item: ScanHistory,
+    dateFormatter: SimpleDateFormat,
+    onClick: (ScanHistory) -> Unit,
+    onLongClick: (ScanHistory) -> Unit
+) {
+    Card(
+        modifier = modifier
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = { onClick(item) },
+                    onLongPress = { onLongClick(item) }
+                )
+            }
+    ) {
+        Row(modifier = Modifier.padding(16.dp)) {
+            Column {
+                Text(
+                    text = item.content,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = dateFormatter.format(item.timeStamp),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp),
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
 @Composable
 fun ScanHistoryListPreview() {
     ScanHistoryList(homeState = HomeState.ScanHistoryFetched(listOf()),
