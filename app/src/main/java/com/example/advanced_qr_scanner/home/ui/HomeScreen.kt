@@ -20,11 +20,12 @@ import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.ModalBottomSheetLayout
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Text
-import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -40,7 +41,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -75,12 +75,13 @@ fun HomeScreen() {
         rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden)
     val coroutineScope = rememberCoroutineScope()
     val barcodeLauncher = rememberLauncherForActivityResult(
+        // Launcher for scanning UI
         contract = BarcodeContract(),
     ) { result ->
         result.qrCodeContent?.let { scannedData ->
             scannedData.launch(context).also { isLaunched ->
                 if (!isLaunched) {
-                    localClipboardManager.setText(AnnotatedString(scannedData))
+                    localClipboardManager.setText(AnnotatedString(scannedData)) // Copy the raw data to the clipboard
                     Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_LONG).show()
                 }
             }
@@ -96,6 +97,7 @@ fun HomeScreen() {
                 coroutineScope.launch { bottomSheetScaffoldState.show() }
             }
         })
+
     viewModel.loadScanHistory()
 
     ModalBottomSheetLayout(
@@ -138,7 +140,7 @@ fun HomeScreen() {
                 onClearClick = { viewModel.removeAllScanHistory() },
                 onItemLongPress = { history ->
                     localClipboardManager.setText(AnnotatedString(history.content))
-                    Toast.makeText(context,"Copied to clipboard",Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
             )
@@ -149,7 +151,7 @@ fun HomeScreen() {
 @Composable
 fun TitleBar(modifier: Modifier = Modifier) {
     Text(
-        text = "Scanner",
+        text = "Advanced QR Code Scanner",
         fontSize = 20.sp,
         fontWeight = FontWeight.W700,
         modifier = modifier.padding(start = 16.dp, top = 26.dp)
@@ -214,12 +216,13 @@ fun ScanHistoryList(
                     composition = composition, progress = { animation },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
+                        .height(300.dp)
                         .padding(top = 16.dp, bottom = 24.dp, start = 16.dp, end = 16.dp)
                         .align(Alignment.CenterHorizontally)
                 )
                 Text(
-                    text = "Start by scanning a barcode,\nusing the button below",
+                    text = "Start by scanning a QR code/barcode",
+                    fontSize = 16.sp,
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 24.dp)
                         .align(Alignment.CenterHorizontally)
@@ -229,7 +232,7 @@ fun ScanHistoryList(
             is HomeState.ScanHistoryFetched -> {
                 val dateFormatter = SimpleDateFormat("dd-MM-yyyy hh.mm.ss aa", Locale.ENGLISH)
 
-                TitleWithClear { onClearClick() }
+                TitleWithClearButton { onClearClick() }
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(homeState.scanHistory) { item ->
                         ScanHistoryItem(
@@ -249,19 +252,19 @@ fun ScanHistoryList(
 @Composable
 fun Title() {
     Text(
-        text = "Previously Scanned Items",
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
+        text = "Previously scanned items",
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
     )
 }
 
 @Composable
-fun TitleWithClear(onClearClick: () -> Unit) {
+fun TitleWithClearButton(onClearClick: () -> Unit) {
     ConstraintLayout(modifier = Modifier.fillMaxWidth()) {
         val (title, clearButton) = createRefs()
         Text(
             text = "Previously scanned items",
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
                 .constrainAs(title) {
                     top.linkTo(parent.top)
                     bottom.linkTo(parent.bottom)
@@ -270,14 +273,14 @@ fun TitleWithClear(onClearClick: () -> Unit) {
                     width = Dimension.fillToConstraints
                 }
         )
-        TextButton(
+        IconButton(
             onClick = { onClearClick() },
             modifier = Modifier.constrainAs(clearButton) {
                 top.linkTo(parent.top)
                 bottom.linkTo(parent.bottom)
                 end.linkTo(parent.end, margin = 16.dp)
             }
-        ) { Text(text = "Clear") }
+        ) { Icon(imageVector = Icons.Filled.ClearAll, null) }
     }
 }
 
@@ -316,14 +319,4 @@ fun ScanHistoryItem(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ScanHistoryListPreview() {
-    ScanHistoryList(homeState = HomeState.ScanHistoryFetched(listOf()),
-        onItemClick = {},
-        onItemLongPress = {},
-        onClearClick = {}
-    )
 }
