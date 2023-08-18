@@ -1,10 +1,11 @@
-package com.example.advanced_qr_scanner.home.domain
+package com.example.advanced_qr_scanner.home.domain.viewmodel
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.advanced_qr_scanner.home.domain.HomeState
 import com.example.advanced_qr_scanner.home.domain.usecase.ClearScanHistoryUseCase
 import com.example.advanced_qr_scanner.home.domain.usecase.FetchScanHistoryUseCase
 import com.example.advanced_qr_scanner.home.domain.usecase.SaveScanHistoryUseCase

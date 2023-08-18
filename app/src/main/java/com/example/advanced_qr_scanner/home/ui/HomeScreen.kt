@@ -1,9 +1,14 @@
 package com.example.advanced_qr_scanner.home.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
@@ -26,13 +31,23 @@ import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ClearAll
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.rememberModalBottomSheetState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -56,13 +71,19 @@ import com.example.advanced_qr_scanner.R
 import com.example.advanced_qr_scanner.extensions.launch
 import com.example.advanced_qr_scanner.home.domain.BarcodeContract
 import com.example.advanced_qr_scanner.home.domain.HomeState
-import com.example.advanced_qr_scanner.home.domain.HomeViewModel
+import com.example.advanced_qr_scanner.home.domain.viewmodel.HomeViewModel
+import com.example.advanced_qr_scanner.home.domain.viewmodel.ThemeViewModel
+import com.example.advanced_qr_scanner.theme.AdvancedQRScannerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
 import comexampleadvancedqrscanner.ScanHistory
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+
+@SuppressLint("StaticFieldLeak")
+private lateinit var dataStoreUtil: DataStoreUtil
+private var textColor: Color = Color.White
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -98,52 +119,75 @@ fun HomeScreen() {
             }
         })
 
+    textColor = MaterialTheme.colorScheme.primary
+    dataStoreUtil = DataStoreUtil(context)
+
+    val systemTheme =
+        when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
+            Configuration.UI_MODE_NIGHT_YES -> true
+            Configuration.UI_MODE_NIGHT_NO -> false
+            else -> false
+        }
+    val theme = dataStoreUtil.getTheme(systemTheme).collectAsState(initial = systemTheme)
+
     viewModel.loadScanHistory()
 
-    ModalBottomSheetLayout(
-        sheetState = bottomSheetScaffoldState,
-        sheetShape = RoundedCornerShape(32.dp),
-        sheetElevation = 8.dp,
-        sheetContent = {
-            PermissionBottomSheet(
-                title = "Camera permission required",
-                subTitle = "Permission for camera required for scanning barcode",
-                buttonText = "Allow"
+    AdvancedQRScannerTheme(darkTheme = theme.value) {
+        ModalBottomSheetLayout(
+            sheetState = bottomSheetScaffoldState,
+            sheetShape = RoundedCornerShape(32.dp),
+            sheetElevation = 8.dp,
+            sheetContent = {
+                PermissionBottomSheet(
+                    title = "Camera permission required",
+                    subTitle = "Permission for camera required for scanning barcode",
+                    buttonText = "Allow"
+                ) {
+                    cameraPermissionState.launchPermissionRequest()
+                    coroutineScope.launch { bottomSheetScaffoldState.hide() }
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
-                cameraPermissionState.launchPermissionRequest()
-                coroutineScope.launch { bottomSheetScaffoldState.hide() }
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Column {
-            TitleBar()
-            ScanQRCode {
-                when (PackageManager.PERMISSION_GRANTED) {
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.READ_EXTERNAL_STORAGE
-                    ) -> {
-                        barcodeLauncher.launch(Unit)
-                    }
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TitleBar(modifier = Modifier.weight(1F))
+                    ThemeSwitcher()
+                }
+                ScanQRCode {
+                    when (PackageManager.PERMISSION_GRANTED) {
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                        ) -> {
+                            barcodeLauncher.launch(Unit)
+                        }
 
-                    else -> {
-                        cameraPermissionState.launchPermissionRequest()
+                        else -> {
+                            cameraPermissionState.launchPermissionRequest()
+                        }
                     }
                 }
+                ScanHistoryList(
+                    homeState = viewModel.homeState,
+                    onItemClick = { history ->
+                        history.content.launch(context)
+                    },
+                    onClearClick = { viewModel.removeAllScanHistory() },
+                    onItemLongPress = { history ->
+                        localClipboardManager.setText(AnnotatedString(history.content))
+                        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                )
             }
-            ScanHistoryList(
-                homeState = viewModel.homeState,
-                onItemClick = { history ->
-                    history.content.launch(context)
-                },
-                onClearClick = { viewModel.removeAllScanHistory() },
-                onItemLongPress = { history ->
-                    localClipboardManager.setText(AnnotatedString(history.content))
-                    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-            )
         }
     }
 }
@@ -154,7 +198,37 @@ fun TitleBar(modifier: Modifier = Modifier) {
         text = "Advanced QR Code Scanner",
         fontSize = 20.sp,
         fontWeight = FontWeight.W700,
-        modifier = modifier.padding(start = 16.dp, top = 26.dp)
+        color = textColor,
+        modifier = modifier.padding(start = 15.dp)
+    )
+}
+
+@Composable
+fun ThemeSwitcher() {
+    val switchState by remember { mutableStateOf(ThemeViewModel.isDarkThemeEnabled) }
+    val coroutineScope = rememberCoroutineScope()
+
+    Switch(
+        checked = switchState.value,
+        onCheckedChange = { state ->
+            switchState.value = state
+            coroutineScope.launch {
+                dataStoreUtil.saveTheme(state)
+            }
+        },
+        thumbContent = {
+            Icon(
+                imageVector = if (switchState.value) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                contentDescription = "Switch Icon",
+                modifier = Modifier.size(SwitchDefaults.IconSize),
+                tint = Color.White
+            )
+        },
+        modifier = Modifier.padding(end = 10.dp),
+        colors = SwitchDefaults.colors(
+            checkedTrackColor = MaterialTheme.colorScheme.primary,
+            checkedThumbColor = MaterialTheme.colorScheme.onPrimary
+        )
     )
 }
 
@@ -166,7 +240,16 @@ fun ScanQRCode(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(vertical = 16.dp, horizontal = 10.dp)
+            .border(
+                BorderStroke(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.tertiary
+                ),
+                shape = RoundedCornerShape(20)
+            )
+            .clip(RoundedCornerShape(20))
+            .background(color = MaterialTheme.colorScheme.secondary)
             .clickable { onScanClick() }
     ) {
         Row(modifier = modifier.fillMaxWidth()) {
@@ -223,6 +306,7 @@ fun ScanHistoryList(
                 Text(
                     text = "Start by scanning a QR code/barcode",
                     fontSize = 16.sp,
+                    color = textColor,
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 24.dp)
                         .align(Alignment.CenterHorizontally)
@@ -253,7 +337,9 @@ fun ScanHistoryList(
 fun Title() {
     Text(
         text = "Previously scanned items",
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+        fontSize = 16.sp,
+        color = textColor,
+        modifier = Modifier.padding(all = 10.dp)
     )
 }
 
@@ -263,8 +349,10 @@ fun TitleWithClearButton(onClearClick: () -> Unit) {
         val (title, clearButton) = createRefs()
         Text(
             text = "Previously scanned items",
+            fontSize = 16.sp,
+            color = textColor,
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(all = 10.dp)
                 .constrainAs(title) {
                     top.linkTo(parent.top)
                     bottom.linkTo(parent.bottom)
@@ -306,6 +394,7 @@ fun ScanHistoryItem(
             Column {
                 Text(
                     text = item.content,
+                    color = textColor,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -313,6 +402,7 @@ fun ScanHistoryItem(
                 )
                 Text(
                     text = dateFormatter.format(item.timeStamp),
+                    color = textColor,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp),
                     fontSize = 14.sp
                 )

@@ -1,4 +1,4 @@
-package com.example.advanced_qr_scanner.ui.theme
+package com.example.advanced_qr_scanner.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
