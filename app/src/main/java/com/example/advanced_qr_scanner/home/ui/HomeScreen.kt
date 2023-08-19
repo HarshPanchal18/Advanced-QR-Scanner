@@ -1,7 +1,6 @@
 package com.example.advanced_qr_scanner.home.ui
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.widget.Toast
@@ -39,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,13 +76,12 @@ import com.example.advanced_qr_scanner.home.domain.viewmodel.ThemeViewModel
 import com.example.advanced_qr_scanner.theme.AdvancedQRScannerTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import comexampleadvancedqrscanner.ScanHistory
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-@SuppressLint("StaticFieldLeak")
-private lateinit var dataStoreUtil: DataStoreUtil
 private var textColor: Color = Color.White
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalPermissionsApi::class)
@@ -120,7 +119,7 @@ fun HomeScreen() {
         })
 
     textColor = MaterialTheme.colorScheme.primary
-    dataStoreUtil = DataStoreUtil(context)
+    val dataStoreUtil = DataStoreUtil(context)
 
     val systemTheme =
         when (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
@@ -133,6 +132,13 @@ fun HomeScreen() {
     viewModel.loadScanHistory()
 
     AdvancedQRScannerTheme(darkTheme = theme.value) {
+        val systemUiController = rememberSystemUiController()
+        val systemColor = MaterialTheme.colorScheme.background
+        SideEffect {
+            // set transparent color so that our image is visible behind the status bar
+            systemUiController.setStatusBarColor(color = systemColor)
+            systemUiController.setNavigationBarColor(color = systemColor)
+        }
         ModalBottomSheetLayout(
             sheetState = bottomSheetScaffoldState,
             sheetShape = RoundedCornerShape(32.dp),
@@ -159,9 +165,10 @@ fun HomeScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TitleBar(modifier = Modifier.weight(1F))
-                    ThemeSwitcher()
+                    ThemeSwitcher(dataStoreUtil)
                 }
-                ScanQRCode {
+
+                ScanQRCodeButton {
                     when (PackageManager.PERMISSION_GRANTED) {
                         ContextCompat.checkSelfPermission(
                             context,
@@ -175,6 +182,7 @@ fun HomeScreen() {
                         }
                     }
                 }
+
                 ScanHistoryList(
                     homeState = viewModel.homeState,
                     onItemClick = { history ->
@@ -195,7 +203,7 @@ fun HomeScreen() {
 @Composable
 fun TitleBar(modifier: Modifier = Modifier) {
     Text(
-        text = "Advanced QR Code Scanner",
+        text = "QR Code Scanner",
         fontSize = 20.sp,
         fontWeight = FontWeight.W700,
         color = textColor,
@@ -204,7 +212,7 @@ fun TitleBar(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ThemeSwitcher() {
+fun ThemeSwitcher(dataStoreUtil: DataStoreUtil) {
     val switchState by remember { mutableStateOf(ThemeViewModel.isDarkThemeEnabled) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -233,7 +241,7 @@ fun ThemeSwitcher() {
 }
 
 @Composable
-fun ScanQRCode(
+fun ScanQRCodeButton(
     modifier: Modifier = Modifier,
     onScanClick: () -> Unit
 ) {
@@ -249,20 +257,26 @@ fun ScanQRCode(
                 shape = RoundedCornerShape(20)
             )
             .clip(RoundedCornerShape(20))
-            .background(color = MaterialTheme.colorScheme.secondary)
             .clickable { onScanClick() }
     ) {
-        Row(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .background(color = MaterialTheme.colorScheme.secondary)
+        ) {
             Icon(
                 imageVector = Icons.Rounded.QrCodeScanner,
                 contentDescription = null,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
+                tint = MaterialTheme.colorScheme.inversePrimary
             )
             Text(
                 text = "Scan a QR/Bar code",
+                fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
-                    .padding(top = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .padding(top = 16.dp, end = 16.dp, bottom = 16.dp),
+                color = MaterialTheme.colorScheme.inversePrimary
             )
         }
     }
@@ -276,7 +290,7 @@ fun ScanHistoryList(
     onItemLongPress: (ScanHistory) -> Unit,
     onClearClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         when (homeState) {
             is HomeState.Loading -> {
                 Title()

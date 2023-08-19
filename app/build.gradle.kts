@@ -93,6 +93,7 @@ dependencies {
     implementation("com.airbnb.android:lottie-compose:5.2.0")
     implementation("com.google.android.material:material:1.9.0")
     implementation("com.google.accompanist:accompanist-permissions:0.25.1")
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.30.1") // system bars customization
 
     val sqlDelightVersion = "1.5.4"
     implementation("com.squareup.sqldelight:android-driver:$sqlDelightVersion")
@@ -102,6 +103,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 
     implementation("com.google.mlkit:barcode-scanning:17.0.2")
+    implementation("com.google.zxing:core:3.4.1")
 
     val datastoreVersion = "1.0.0"
     implementation("androidx.datastore:datastore-core:$datastoreVersion")
